@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>
+        机器人管理
+    </title>
+    <link rel="stylesheet" href="{{url_for('static',filename='css/app.css')}}" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
+</head>
+
+<body>
+
+    <div class="row">
+        <div class="pad">
+            <div class="row">
+                <div class="col">
+                    <h1 style="display: inline;margin: 3px;font-size: x-large;">机器人提示管理
+                        <a href="/" style="color:#606060;font-size:medium;">邮件管理</a></h1>
+                </div>
+                <div class="col" style="display: inline;max-width: fit-content;">
+                    <button title="添加一个机器人." onclick="$('#new-robot-panel').fadeIn()" style="top:13px;">新建机器人</button>
+                    <input placeholder="Search..." id="filter-by" style="top:12px;"
+                        oninput="panel.renderTasksTable()" />
+                    <select id="sort-by" style="position:relative;top:13px;" onchange="panel.renderTasksTable()">
+                        <option>名称顺序</option>
+                        <option>机器人顺序</option>
+                        <option>创建时间顺序</option>
+                        <option>创建时间逆序</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="height: 80vh;">
+        <div class="col">
+            <div class="pad" style="height: 90%;">
+
+                <ul class="tabs">
+                    <li class="active" id="tasks-tab" onmouseover="panel.showTasks()">任务列表</li>
+                    <li id="actions-tab" onmouseover="panel.showActions()">操作记录</li>
+                </ul>
+
+                <div class="table-panel" style="overflow-y:auto;height:90%;">
+                    <table id="tasks-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    ID
+                                </th>
+                                <th>
+                                    任务名称
+                                </th>
+                                <th>
+                                    机器人
+                                </th>
+                                <th>
+                                    发送时间
+                                </th>
+                                <th>
+                                    最后运行时间
+                                </th>
+                                <th>
+                                    创建人
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-tbody">
+
+                        </tbody>
+                    </table>
+
+                    <ul id="actions-list" style="display:none;font-size: small;font-weight: lighter;">
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col" style="flex:none;width:fit-content;max-width: 30rem;">
+
+            <div class="pad" style="flex:none;">
+                <span>任务信息</span>
+                <span id="task-id"></span>
+
+                <div class="input-group">
+                    <span>任务名称</span>
+                    <input id="task-name" />
+                </div>
+
+                <div class="input-group">
+                    <span>消息类型</span>
+                    <select id="task-msgMaker"
+                        onchange="panel.getTaskTemplate().then(()=>{panel.renderInfoInputs()})"></select>
+                </div>
+
+                <div class="input-group">
+                    <span>机器人</span>
+                    <input id="task-robot" oninput="panel.renderRobotsOptions()" onfocus="$('#ready-robots').slideDown()" onblur="$('#ready-robots').slideUp()" />
+                    <div id="ready-robots">
+
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <span>数据库</span>
+                    <select id="task-database" onchange="panel.renderTableOptions();"></select>
+                </div>
+
+                <div class="input-group">
+                    <span>数据表</span>
+                    <select id="task-table"></select>
+                </div>
+
+                <div class="input-group">
+                    <span>发送日期</span>
+                    <input type="text" id="task-weekdays" title="每周的第几天发送,使用逗号分隔,例: 1,3,5 即表示周一周三周五会发送."
+                        placeholder="每周几发送" style="width: 4.5rem;" />
+                    月
+                    <input type="text" id="task-days" title="每月的第几天发送,使用逗号分隔,例: 1,15 即表示每月1号和15号会发送."
+                        placeholder="每月几号发送" style="width:4rem" />
+                </div>
+
+                <div class="input-group">
+                    <span>发送时间</span>
+                    <input title="每日的发送时间,格式类似 06:30,08:45 使用逗号分隔, 不填写则每次都会运行." id="task-opt-time" />
+                </div>
+
+                <div class="input-group">
+                    <span>@</span>
+                    <textarea id="task-at" style="overflow: hidden;word-break: break-all;"></textarea>
+                </div>
+
+                <div class="input-group">
+                    <span>暂停时长</span>
+                    <input id="task-mute" type="number" title="如果提示发出后, 暂停多少时间不再进行提示, 单位是秒" value="0" required />
+                </div>
+
+                <div class="input-group">
+                    <span>检查的SQL</span>
+                    <textarea id="task-testSql"></textarea>
+                </div>
+
+                <div class="input-group">
+                    <span>创建人</span>
+                    <input id="task-creator" type="text" />
+                </div>
+
+            </div>
+
+            <div class="pad" id="info-inputs" style="overflow: auto;">
+
+            </div>
+
+            <div class="pad" style="flex:none;">
+                <div class="input-group">
+                    <button title="点击后依照上方控件中输入的信息新建一个机器人任务"
+                        onclick="$(this).attr('disabled',true);panel.creatTask().finally(()=>{$(this).attr('disabled',false)})">新建任务</button>
+                    <button title="删除该机器人任务"
+                        onclick="$(this).attr('disabled',true);panel.deleteTask().finally(()=>{$(this).attr('disabled',false)})">删除任务</button>
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.updateTask().finally(()=>{$(this).attr('disabled',false)})">保存更改</button>
+                </div>
+
+                <div class="input-group">
+                    <button title="点击后立即执行该任务"
+                        onclick="$(this).attr('disabled',true);panel.runTaskNow().finally(()=>{$(this).attr('disabled',false)})">立即执行</button>
+                    <button title="对该任务进行测试, 消息会发送, 但是不会对发送动作进行记录."
+                        onclick="$(this).attr('disabled',true);panel.runTaskTest().finally(()=>{$(this).attr('disabled',false)})">发送测试消息</button>
+                    <button title="查看当前运行该任务会生成什么样的消息, 仅生成消息, 不进行发送."
+                        onclick="$(this).attr('disabled',true);panel.checkMsg().finally(()=>{$(this).attr('disabled',false)})">查看消息内容</button>
+                    <button title=""
+                        onclick="$(this).attr('disabled',true);panel.getMsgHistory().finally(()=>{$(this).attr('disabled',false)})">查看发送历史记录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="pad" style="text-align: end;">
+            <svg width="32" height="32" version="1.1" xmlns="http://www.w3.org/2000/svg" id="loading-symbol">
+                <circle cx="16" cy="16" r="13" style="fill:#999"></circle>
+                <circle cx="16" cy="16" r="10" style="fill:#252525"></circle>
+                <line x1="16" y1="0" x2="16" y2="16" style="stroke: #252525;stroke-width:4px"></line>
+                <line x1="0" y1="25" x2="16" y2="16" style="stroke: #252525;stroke-width:4px"></line>
+                <line x1="32" y1="25" x2="16" y2="16" style="stroke: #252525;stroke-width:4px"></line>
+            </svg>
+            <span id="progress" onmouseover="panel.showActions()" onmouseout="panel.showTasks()"></span>
+        </div>
+    </div>
+
+    <div id="new-robot-panel"
+        style="position: fixed;top:4rem;right:10rem;border:solid;border-radius: 1rem;padding:1rem;background-color: #404040;width:30rem;display:none">
+        <div class="input-group">
+            <span>机器人名称</span>
+            <input style="width: 20rem;" id="new-robot-name" />
+        </div>
+        <div class="input-group">
+            <span>Webhook</span>
+            <input style="width: 20rem;" id="new-robot-api" />
+        </div>
+        <div class="input-group">
+            <span>密钥</span>
+            <input style="width: 20rem;" id="new-robot-key" />
+        </div>
+        <div style="display: inline;">
+            <button onclick="$('#new-robot-panel').fadeOut()">取消</button>
+        </div>
+        <div style="display: inline;position: absolute;right: 1rem;">
+            <button
+                onclick="$(this).attr('disabled',true);panel.addRobot().then(()=>{ panel.renderRobotsOptions();$('#new-robot-panel').fadeOut();}).finally(()=>{$(this).attr('disabled',false)})">新建</button>
+        </div>
+    </div>
+
+    <script src="{{url_for('static',filename='js/utils.js')}}"></script>
+    <script src="{{url_for('static',filename='js/robot.js')}}"></script>
+</body>
+
+</html>

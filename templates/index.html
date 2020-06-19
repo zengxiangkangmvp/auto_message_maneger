@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>
+        邮件报表管理
+        {% if local: %}
+        - 本机
+        {% endif %}
+    </title>
+    <link rel="stylesheet" href="{{url_for('static',filename='css/app.css')}}" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
+    <style>
+
+    </style>
+</head>
+
+<body>
+
+    <div class="row">
+        <div class="pad">
+            <div class="row">
+                <div class="col">
+                    <h1 style="display: inline;margin: 3px;font-size: x-large;">邮件报表管理
+                        {% if not local: %}
+                        <a href="/robot-tasks" style="color:#606060;font-size:medium;">机器人管理</a>
+                        {% else %}
+                        (本机邮件)
+                        {% endif %}
+                    </h1>
+                </div>
+                <div class="col" style="display: inline;max-width: fit-content;">
+                    <input placeholder="Search..." id="filter-by" style="top:12px;"
+                        oninput="panel.renderMailsTable()" />
+                    <select id="sort-by" style="position:relative;top:13px;" onchange="panel.renderMailsTable()">
+                        <option>名称顺序</option>
+                        <option>创建时间顺序</option>
+                        <option>创建时间逆序</option>
+                        <option>发送时间顺序</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="height: 80vh;">
+        <div class="col">
+            <div class="pad" style="height: 90%;">
+
+                <ul class="tabs">
+                    <li class="active" id="mails-tab" onmouseover="panel.showMails()">邮件列表</li>
+                    <li id="actions-tab" onmouseover="panel.showActions()">操作记录</li>
+                </ul>
+
+                <div class="table-panel" style="overflow-y:auto;height:90%;">
+                    <table id="mails-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    ID
+                                </th>
+                                <th>
+                                    报表名称
+                                </th>
+                                <th>
+                                    发送时间
+                                </th>
+                                <th>
+                                    收件人
+                                </th>
+                                <th>
+                                    今日发送时间
+                                </th>
+                                <th>
+                                    创建人
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="mails-tbody">
+
+                        </tbody>
+                    </table>
+
+                    <ul id="actions-list" style="display:none;font-size: small;font-weight: lighter;">
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col" style="flex:none;width:30rem">
+
+            <div class="pad" style="flex:none;">
+                <span>基本信息</span>
+                <span id="report-id"></span>
+
+                <div class="input-group">
+                    <span>当前模板</span>
+                    <select id="report-builder"
+                        onchange="panel.getInfoTemplate().then(()=>{panel.renderInfoInputs()})"></select>
+                    <span class="tooltip" id="builder-tooltip"></span>
+                </div>
+
+                <div class="input-group">
+                    <span>报表名称</span>
+                    <input type="text" id="report-name" />
+                </div>
+
+                <div class="input-group">
+                    <span>收件人</span>
+                    <textarea type="text" id="report-receiver" style="overflow: hidden;text-overflow: ellipsis;"
+                        title="每行一条,人名与邮箱使用冒号隔开,人名可选."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <span>数据库</span>
+                    <select id="report-database"
+                        onchange="panel.renderTableOptions();panel.readCols().then(()=>{panel.renderCols()})"></select>
+                </div>
+
+                <div class="input-group">
+                    <span>数据表</span>
+                    <select id="report-table" onchange="panel.readCols().then(() => { panel.renderCols(); })"></select>
+                </div>
+
+                <div class="input-group">
+                    <span>发送时间</span>
+                    <input type="time" id="report-post-time" style="width:5rem"
+                        title="这里的发送时间并不是指的精确的执行时间, 具体执行时间取决于任务计划的设置." />
+                    周
+                    <input type="text" id="report-post-weekday" title="每周的第几天发送,使用逗号分隔,例: 1,3,5 即表示周一周三周五会发送."
+                        placeholder="每周几发送" style="width: 4.5rem;" />
+                    月
+                    <input type="text" id="report-post-day" title="每月的第几天发送,使用逗号分隔,例: 1,15 即表示每月1号和15号会发送."
+                        placeholder="每月几号发送" style="width:4rem" />
+                </div>
+
+                <div class="input-group">
+                    <span>备注</span>
+                    <textarea id="report-remarks"></textarea>
+                </div>
+
+                <div class="input-group">
+                    <span>检查的SQL</span>
+                    <textarea id="report-testSql" title="在发送前执行的查询,只有查询到数据且数据均为 True 才会发送,否则会发送错误信息给相关人员."></textarea>
+                </div>
+
+                {% if local: %}
+                <div class="input-group">
+                    <span>本地附件</span>
+                    <textarea id="report-local-attach" title="本地附件的地址,多个附件使用换行符分隔,&#10;附件名中的 YYYY 会被替换为发送当时的年, &#10;MM 会被替换成月, &#10;DD 会被替换成日, &#10;WW 会被替换成周&#10;本地邮件被指定后将不再发送默认附件."></textarea>
+                </div>
+                {% endif %}
+
+                <div class="input-group">
+                    <span>创建人</span>
+                    <input id="report-creator" title="可以包含邮箱, 填写了邮箱后邮件发生错误会发送邮件至该邮箱." type="text" />
+                </div>
+
+            </div>
+
+            <div class="pad" id="info-inputs" style="overflow: auto;">
+
+            </div>
+
+            <div class="pad" style="flex:none;">
+                <div class="input-group">
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.createMail().finally(()=>{$(this).attr('disabled',false)})">依照上方信息新建邮件</button>
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.postNow().finally(()=>{$(this).attr('disabled',false)})">立即发送</button>
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.deleteMail().finally(()=>{$(this).attr('disabled',false)})">删除</button>
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.updateMail().finally(()=>{$(this).attr('disabled',false)})">保存更改</button>
+                </div>
+
+                <div class="input-group">
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.checkSql().finally(()=>{$(this).attr('disabled',false)})">查看SQL</button>
+                    <select id="sql-funcs"></select>
+                    <input type="text" id="sql-args" placeholder="SQL方法参数" />
+                </div>
+
+                <div class="input-group">
+                    <input type="text" placeholder="测试邮箱地址" id="test-mail" />
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.tryPost().finally(()=>{$(this).attr('disabled',false)})">发送测试邮件</button>
+                    <button
+                        onclick="$(this).attr('disabled',true);panel.checkMailHtml().finally(()=>{$(this).attr('disabled',false)})">在新页面查看邮件</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="pad" style="text-align: end;">
+            <svg width="32" height="32" version="1.1" xmlns="http://www.w3.org/2000/svg" id="loading-symbol">
+                <circle cx="16" cy="16" r="13" style="fill:#999"></circle>
+                <circle cx="16" cy="16" r="10" style="fill:#252525"></circle>
+                <line x1="16" y1="0" x2="16" y2="16" style="stroke: #252525;stroke-width:4px"></line>
+                <line x1="0" y1="25" x2="16" y2="16" style="stroke: #252525;stroke-width:4px"></line>
+                <line x1="32" y1="25" x2="16" y2="16" style="stroke: #252525;stroke-width:4px"></line>
+            </svg>
+            <span id="progress" onmouseover="panel.showActions()" onmouseout="panel.showMails()"></span>
+        </div>
+    </div>
+
+    <script src="{{url_for('static',filename='js/utils.js')}}"></script>
+    <script src="{{url_for('static',filename='js/app.js')}}"></script>
+</body>
+
+</html>

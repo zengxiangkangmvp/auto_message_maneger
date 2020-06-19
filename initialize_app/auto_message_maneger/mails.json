@@ -1,0 +1,7 @@
+{
+    "remindservices": {
+        "host_server":"smtp.exmail.qq.com",
+        "mail":"",
+        "pwd":""
+    }
+}
